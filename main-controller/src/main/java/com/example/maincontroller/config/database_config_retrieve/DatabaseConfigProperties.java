@@ -1,4 +1,4 @@
-package com.example.maincontroller.config;
+package com.example.maincontroller.config.database_config_retrieve;
 
 import lombok.Data;
 

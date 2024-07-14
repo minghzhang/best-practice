@@ -1,6 +1,8 @@
-package com.example.maincontroller.config;
+package com.example.maincontroller.config.database_config_retrieve;
 
-import com.alibaba.fastjson2.JSON;
+
+import static com.alibaba.fastjson.JSON.parseObject;
+
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
@@ -25,7 +27,7 @@ public class ThirdPartyDatabaseConfigFetcher implements DatabaseConfigFetcher {
             response = call.execute();
             ResponseBody body = response.body();
             String bodyString = body.string();
-            DatabaseConfigProperties databaseConfig = JSON.parseObject(bodyString, DatabaseConfigProperties.class);
+            DatabaseConfigProperties databaseConfig = parseObject(bodyString, DatabaseConfigProperties.class);
             log.info("fetchDatabaseConfig: {}", databaseConfig);
             return databaseConfig;
         } catch (IOException e) {
