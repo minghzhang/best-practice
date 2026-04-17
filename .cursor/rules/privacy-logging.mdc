@@ -1,0 +1,94 @@
+---
+alwaysApply: true
+---
+**📋 This rule file is actively loaded and enforced during code generation.**
+
+# Privacy Logging Standards
+
+## Quick Decision Rules
+
+- **L5** - **NEVER log** - HSI: payment data, health/biometric data, auth
+  secrets
+- **L4** - **NEVER log** - Customer content, SPII (SSN, license, passport)
+- **L3** - Tag `{E}...{/E}` - Direct identifiers, user IDs, precise location,
+  device IDs
+- **L2** - Allowed - Demographics, indirect IDs, auto-generated data
+- **L1** - Allowed - Internal business data, IT operations, metrics
+- **L0** - Allowed - Public information
+
+## Data Sensitivity Reference
+
+**L5 - NEVER LOG:**
+
+- Payment: card data, bank accounts, PINs, purchase history
+- Health: biometrics, health records, genomic data
+- Auth: passwords, OTP, tokens, private keys
+
+**L4 - NEVER LOG:**
+
+- Customer content: meeting titles, chat, recordings, transcripts, AI
+  prompts/responses
+- SPII: SSN, driver's license, passport, military ID
+
+**L3 - TAG WITH {E}:**
+
+- Direct identifiers: name, email, phone, DOB
+- Zoom direct identifiers (for individual/account): userId, accountId, PMI
+- Location: address, zip, lat/long within 1000m
+- Device IDs: IP, MAC, IMEI, cookie ID, device fingerprint
+
+**L2 - ALLOWED:**
+
+- Demographics: gender, country, city, year of birth
+- Zoom indirect identifiers (combinable): meetingId, pollingId, fileId,
+  recordingId
+- Auto-generated: timestamp, session tracking ID, metric counts
+
+**L1/L0 - ALLOWED:**
+
+- IT operations, metrics, public content
+
+## L3 Data Tagging
+
+**MUST** ensure L3 data is wrapped with `{E}` and `{/E}` markers in the final
+log output, regardless of programming language or logging framework.
+
+Expected log output:
+
+```text
+User {E}abc@zoom.us{/E} logged out
+Request from IP {E}192.168.1.1{/E}
+```
+
+Embed `{E}`/`{/E}` markers around L3 values using your language's string
+formatting idiom. If your project provides a privacy-logging library or helper,
+prefer its API over manual tagging. See language-specific rule files for
+details.
+
+## Alternative Logging Strategies
+
+Use lower-sensitivity alternatives when possible:
+
+- PMI → `meetingId`
+- userId/accountId → `session tracking ID`
+- passcode values → `boolean match result`
+
+## Security Events
+
+**MUST log** in audit log (without sensitive content):
+
+- Auth: login/logout, account changes, privilege changes
+- Data access: restricted data attempts, L4/L5 CRUD operations (type only)
+- System: security settings changes, malware detections
+
+**SHOULD log:**
+
+- Validation/session failures
+- Application errors, third-party service errors
+- Higher-risk functionality: admin actions, payment access, key operations
+- Legal/consent: opt-ins, terms acceptance
+
+## Log Entry Requirements
+
+Each entry **MUST** include: timestamp, source, user reference (L2 IDs), event
+type/outcome.

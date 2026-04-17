@@ -1,0 +1,79 @@
+---
+globs: *.js, *.mjs, *.cjs, *.jsx, *.ts, *.tsx
+---
+# Secure Development Principles
+
+These rules define essential practices for writing and generating secure code.\
+They apply universally — to manual development, automated tooling, and
+AI-generated code across mobile, web, desktop/thick clients, realtime/media, and
+backend services.
+
+All violations must include a clear explanation of which rule was triggered and
+why, to help developers understand and fix the issue effectively.
+
+## 1. Secure Defaults
+
+- Use HTTPS URLs only.
+- Set secure cookie flags when applicable:
+  - HttpOnly
+  - Secure
+  - SameSite=Strict (or Lax if required)
+- Use strict CSP headers where relevant.
+- Protect against prototype pollution
+
+## 2. Input Validation
+
+- Always validate and sanitize inputs using libraries like Zod or Joi. Never
+  trust user-provided data.
+- XSS prevention: Ensure DOM manipulation uses textContent or innerText instead
+  of innerHTML to prevent XSS.
+
+## 3. SQL Injection Prevention
+
+- No Template Literals: Never use backticks (\`) or + to insert variables into
+  SQL strings.
+- Parameterized Queries: Always use placeholders (e.g., ?, $1, or :name) and
+  pass values as a separate array/object.
+- ORM/Query Builder Safety: If using an ORM (Prisma, Sequelize) or Query Builder
+  (Knex), use their built-in parameterization methods. Explicitly warn if a
+  specific method (like raw()) is dangerous.
+- Least Privilege: Ensure the generated code assumes a database user with
+  restricted permissions (e.g., no DROP or TRUNCATE capabilities).
+
+## 4. Path Handling Security
+
+- Normalize the Path: Use path.normalize() to resolve .. and . segments.
+- Resolve to Absolute: Use path.resolve() to turn it into a full system path.
+- Validate the Root: Check if the resulting string starts with your intended
+  base directory.
+- Whitelist Extensions: Even if the path is safe, you might not want users
+  downloading .exe or .js files. Check the extension using path.extname().
+- Use process.cwd() carefully: Be specific about your root directory so your
+  "jail" doesn't change depending on where the script was launched.
+
+## 5. Cryptographic
+
+- ❌ Never hardcode secrets (API keys, passwords, tokens). Never use
+  Math.random().
+- No Legacy Crypto: Do not use crypto-js, MD5, SHA-1, or RSA-PKCS1v1_5.
+- Use the native Web Crypto API (globalThis.crypto.subtle), node:crypto module,
+  or libsodium-wrappers.
+- Use crypto.getRandomValues() or crypto.randomBytes().
+
+## 6. Dependency Safety
+
+- Prefer built-in Node.js modules (like node:crypto or node:fs) over small,
+  unmaintained third-party packages.
+
+## 7. Async & Promise Safety
+
+- Always handle promise rejections.
+- Use try/catch with async/await.
+- Avoid unhandled promise rejections.
+
+## 8. Frontend-Specific Rules
+
+- Never use `dangerouslySetInnerHTML` unless explicitly required and sanitized.
+- Avoid `eval`, `new Function`, or dynamic code execution.
+- Prevent XSS by escaping dynamic content.
+- Validate postMessage origins.

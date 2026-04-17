@@ -13,12 +13,15 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
+        if (returnType.hasMethodAnnotation(NotNeedWrapperResponse.class)) {
+            return false;
+        }
         return true;
     }
 
     @Override
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request,
-            ServerHttpResponse response) {
+                                  ServerHttpResponse response) {
         if (body instanceof Response<?>) {
             return body;
         }

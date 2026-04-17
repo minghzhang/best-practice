@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.0</version>
+        <relativePath/>
+    </parent>
+    <groupId>com.bestpractice</groupId>
+    <artifactId>async-platform-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>async-platform-parent</name>
+    <description>Kafka-backed async platform inspired by event-platform asyncMQ best practices</description>
+    <modules>
+        <module>async-platform-core</module>
+        <module>async-platform-runtime</module>
+        <module>async-platform-kafka-adapter</module>
+        <module>async-platform-spring-boot-starter</module>
+        <module>async-platform-demo-app</module>
+    </modules>
+    <properties>
+        <java.version>17</java.version>
+        <kafka-clients.version>3.5.1</kafka-clients.version>
+        <lombok.version>1.18.32</lombok.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,135 @@
+---
+globs: *.java, *.jav, *.xml, pom.xml, application.properties, application.yml
+---
+# Java Secure Coding Standard (Spring/MyBatis/Elasticsearch)
+
+This comprehensive rule set implements the Zoom Product Security Requirements
+(ZPSR) and internal "Java Secure Coding Practice Guidelines". It extends the
+[Security Baseline](.cursor/rules/security-security-baseline.mdc) and covers
+OWASP Top 10 vulnerabilities, SEI CERT Java Coding Standards, and
+framework-specific security best practices.
+
+## 1. Context-Aware Application Security
+
+Apply these rules based on the component type you are currently editing.
+
+### 1.1 When editing **Controllers** (`@Controller`, `@RestController`)
+
+**Input Validation (Mandatory):** **Validate ALL inputs:** Body, Param, Path.
+Ignoring validation causes memory leaks, slow queries, or injection (Internal
+Guideline #4). **ReDoS Prevention:** When using `@Pattern` or `regex`, **AVOID**
+nested quantifiers like `(a+)+`. Enforce strict length limits (`@Size`) *before*
+regex checks. **Sanitization:** For HTML input, use `owasp-java-html-sanitizer`.
+**NEVER** output raw user data to HTML. **Authorization (Mandatory):** **IDOR
+Prevention:** User-owned pages/functions **MUST** be authorized. Verify the
+authenticated user owns the requested resource (Internal Guideline #1). Check
+for `@PreAuthorize` or `@Secured`. **Deny by default** if missing. **CSRF:** For
+state-changing methods (POST/PUT/DELETE), ensure CSRF protection is active
+(Internal Guideline #6). **Response:** Never return raw entities. Use DTOs to
+prevent mass assignment and information leakage. **File Uploads:** **Validate:**
+Allow-list specific file extensions and MIME types. **Do not** rely solely on
+`Content-Type` header. **Sanitize:** Use `FilenameUtils.getName()` to prevent
+directory traversal in filenames. **Scan:** Ensure uploaded files are scanned
+for malware (ZPSR FR-05).
+
+### 1.2 When editing **Data Access Layers** (MyBatis, JPA, Elasticsearch)
+
+**SQL Injection (Mandatory):** **MyBatis:** Check all `<select>`, `<update>`,
+`<insert>`, `<delete>` tags. **CRITICAL:** `#{}` (Prepared Statement) is
+REQUIRED. **BAN:** `${}` (String Substitution) is FORBIDDEN for user input
+(Internal Guideline #3). **JPA:** Use Named Parameters (`:param`) or positional
+`?1` in `@Query`. **LIKE Clauses:** Use `CONCAT('%', #{value}, '%')`.
+**Elasticsearch Injection:** **Strictly Ban** string concatenation for JSON
+queries. **Use** `QueryBuilders` or `NativeSearchQueryBuilder` (Spring Data
+Elasticsearch) to safely construct queries. **Validate** sort parameters against
+an allow-list to prevent DoS via expensive sorting. **Dynamic SQL:** Ensure
+`<foreach>` collections use `#{item}`.
+
+### 1.3 When editing **Service/Business Logic**
+
+**Transactionality:** Ensure `@Transactional` is used correctly. **Session
+Management:** Create a new session upon successful login to prevent Session
+Fixation (Internal Guideline #10). **Business Logic Auth:** Verify ownership
+(IDOR prevention) if the Controller layer didn't. **File Handling (ZPSR
+FR-xx):** **Path Traversal:** Use `FilenameUtils.getName(input)`. **Ban**
+`replaceAll("\\.\\.", "")`. Verify resolved path `startsWith(basePath)`.
+**Storage:** Store files **OUTSIDE** the web root (e.g., S3, separate volume).
+Do not store in `src/main/resources`. **Execution:** Prevent execution
+permissions on uploaded files (`chmod -x`). **Content:** Verify magic numbers
+(file signature) for image/document uploads, not just extensions.
+
+### 1.4 When editing **Configuration** (`application.properties`, `SecurityConfig.java`)
+
+**Secrets (Mandatory):** **No Hardcoded Secrets:** Passwords, keys, and tokens
+**MUST NOT** be in code or properties files. **Use CSMS:** Use the internal
+`csms-sdk-api` (`cloud-secrets-management-service-sdk`) to fetch secrets at
+runtime. This is the **preferred** method over environment variables (Internal
+Guideline #15). **Production Safety:** **Mandatory** Disable debug
+features/modes in production (Internal Guideline #12). **Actuators:**
+`management.endpoints.web.exposure.include=health,info`. **Cookies:**
+`http-only=true`, `secure=true` (Internal Guideline #13).
+
+## 2. Universal Secure Coding Rules (Apply Everywhere)
+
+### 2.1 Injection Prevention (OWASP A03)
+
+**Command Injection:** **Strictly Ban**
+`Runtime.getRuntime().exec(String command)`. **Use** `ProcessBuilder` or
+`Runtime.exec(String[])` (array version) to separate command from arguments.
+**XXE (Mandatory):** Disable DTDs/External Entities in **ALL** parsers:
+`DocumentBuilder`, `SAXParser`, `XMLInputFactory`, `TransformerFactory`,
+`SchemaFactory`, `Unmarshaller`, `Dom4j SAXReader`. **LDAP:** Escape inputs in
+LDAP filters.
+
+### 2.2 Cryptography & Secrets (OWASP A02 / ZPSR CO-xx)
+
+**Randomness:** Use `java.security.SecureRandom`, NEVER `java.util.Random`.
+**Hashing:** Use SHA-256+, NEVER MD5/SHA-1.Use PBKDF2 for password storage.
+**Encryption:** Use AES-GCM (128-bit+) or RSA-2048+. **BAN** DES, RC4, ECB mode
+(Internal Guideline #14). **Trust:** **Strictly Ban** `TrustAll` TrustManagers.
+**Crypto API:** Use APIs provides in us.zoom.zva.common.util.Crypto whenever
+applicable
+
+### 2.3 Logging & Error Handling (ZPSR EL-xx)
+
+**Console:** **Strictly Ban** `System.out` / `printStackTrace`. **Masking
+(Mandatory):** Desensitize displayed/logged data (Internal Guideline #2).
+Example: Phone `158****9119`. **Exceptions:** Throw custom exceptions; never
+generic `Exception`. **Sensitive Data Annotation:** For sensitive fields, add
+@SensitiveElement or @HiddenElement as appropriate
+
+### 2.4 Java Best Practices (SEI CERT / Internal)
+
+**Resource Exhaustion:** Avoid nested regex quantifiers `(a+)+` on user input.
+Limit input length. **Deserialization:** **Strictly Ban**
+`ObjectInputStream.readObject` on untrusted data. Use JSON/XML or
+`readInt()`/primitive methods only if necessary. **Mutability:** Return/Store
+defensive copies of mutable objects (`Date`, arrays).
+
+## 3. High-Risk Library Specifics
+
+**Jackson (`jackson-databind`):** **Risk:** Polymorphic Deserialization (RCE).
+**Rule:** Avoid `enableDefaultTyping()`. If polymorphic types are needed, use
+`@JsonTypeInfo` with strict `BasicPolymorphicTypeValidator` allow-listing.
+**SnakeYAML:** **Risk:** Constructor Injection (RCE). **Rule:** **Strictly Ban**
+`new Yaml()` (default safe constructor). Use `new Yaml(new SafeConstructor())`
+to parse untrusted content. **Apache Commons:** **IO:** Use `FilenameUtils` for
+path sanitization. **Collections/BeanUtils:** Keep updated to latest versions to
+avoid gadget chain vulnerabilities.
+
+## 4. Quick Reference: Security Annotations
+
+| Annotation | Purpose | Example | | :--- | :--- | :--- | | `@Valid` | Trigger
+Bean Validation | `public void foo(@Valid @RequestBody DTO dto)` | | `@NotNull`
+/ `@NotBlank` | Prevent Null/Empty inputs | `private String name;` | |
+`@Size(min=X, max=Y)` | Enforce Length Limits | `private String username;` | |
+`@Pattern(regexp="...")` | Enforce Format (Allow-list) |
+`private String zipCode;` | | `@PreAuthorize` | Access Control |
+`@PreAuthorize("hasRole('ADMIN')")` | | `@Transactional` | Atomic Operations |
+On Service methods | | `@JsonIgnore` | Prevent field serialization | On password
+fields |
+
+## 5. Third-Party & Supply Chain
+
+**Dependencies:** Check `pom.xml` for known CVEs. **JNI:** Avoid
+`System.loadLibrary` with dynamic paths.

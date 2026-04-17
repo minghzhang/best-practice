@@ -1,0 +1,54 @@
+---
+globs: *.c, *.h, *.cpp, *.hpp, *.cc, *.hh
+---
+# Secure Development Principles
+
+These rules define essential practices for writing and generating C/C++ secure
+code. They apply universally — to manual development, automated tooling, and
+AI-generated code. All violations must include a clear explanation of which rule
+was triggered and why, to help developers understand and fix the issue
+effectively.
+
+## 1. Memory Safety
+
+- Avoid buffer overflows, out-of-bounds access, and use-after-free. Always
+  validate buffer sizes.
+- Avoid raw pointers whenever possible. Prefer RAII and smart pointers, such as
+  std::unique_ptr, std::shared_ptr, and std::weak_ptr
+- Avoid unsafe functions (gets, strcpy, sprintf, scanf without bounds). Prefer
+  safe alternatives (snprintf, strncpy_s, std::array, std::vector, std::string)
+- Use std::array, std::vector, std::string, etc. instead of raw arrays
+- Initialize all variables.
+- Free allocated memory exactly once. Set pointer to null immediately after
+  free.
+
+## 2. Input Validation
+
+- Treat all external input as untrusted. Validate their length, type, range, and
+  format.
+- Prevent integer overflow/underflow.
+- Use size-aware types (size_t, fixed-width integers like uint32_t).
+
+## 3. Error Handling
+
+- Check all return values, include system calls, allocation failures, etc.
+- Avoid silent failures. Return meaningful error codes or use exceptions safely
+  (C++). Provide clear error propagation.
+
+## 4. Concurrency Safety
+
+- Use safe synchronization primitives appropriate to your platform (e.g.,
+  `std::mutex`, `pthread_mutex_t`, etc.)
+- Avoid data races; avoid manual `lock()`/`unlock()` pairs.
+- Always use RAII-style or scoped locking where available.
+
+## 5. Cryptographic
+
+- Use industry-standard libraries, such as libsodium, OpenSSL (3.x+)
+- Ensure all buffers containing keys or plaintexts are zeroed out before being
+  freed
+- ❌ Never hardcode secrets (API keys, passwords, tokens). Never use rand(),
+  srand(), and etc. PRNG for cryptographic secrets.
+- Use /dev/urandom, std::random_device, etc. cryptographic level RNG
+- Use PBKDF2 for password storage and SHA-256/SHA-3 for data integrity.
+- Encryption: Default to secure modes and algorithms like AES-GCM

@@ -1,0 +1,123 @@
+---
+globs: *.java
+---
+**📋 This rule file is actively loaded and enforced during code generation.**
+
+# Java Logging Standards
+
+> **Prerequisite**: This rule extends `logging.rule.md`. Apply general logging
+> rules first.
+
+## Core Prohibitions
+
+- **NEVER** log L4-L5 data (passwords, tokens, payment info, customer content)
+- **NEVER** log system secrets (JWT tokens, access tokens, API keys, private
+  keys)
+- **NEVER** use `System.out.println()` or `e.printStackTrace()`
+- **NEVER** use string concatenation in log statements
+
+## Logging Framework
+
+**MUST** use logging-extension SDK >= 1.1.29:
+
+```xml
+<dependency>
+    <groupId>us.zoom.async</groupId>
+    <artifactId>logging-extension</artifactId>
+    <version>1.1.29</version>
+</dependency>
+```
+
+## Logger Declaration
+
+```java
+private static final Logger logger = LoggerFactory.getLogger(YourClass.class);
+private final Logger logger = LoggerFactory.getLogger(this.getClass());
+```
+
+## Placeholder Rules
+
+- **L3 Primitive/String** → `{E}`: `logger.info("userId={E}", id);`
+- **Object with L3 fields** → `{#}`: `logger.info("data {#}", obj);`
+- **L0-L2 Primitive/String** → `{}`: `logger.info("meetingId={}", mid);`
+
+```java
+logger.info("User login: userId={E}, time={}", userId, time);
+logger.info("Request data {#}", requestObj);
+```
+
+## Debug Logging
+
+**RECOMMENDED** check debug level before logging:
+
+```java
+if (logger.isDebugEnabled()) {
+    logger.debug("Debug message: {}", message);
+}
+LogUtil.debug(logger, "Debug message: {}", message);
+```
+
+## Exception Handling
+
+**NEVER** use e.printStackTrace() for exception handling, use WebLogger
+utilities instead:
+
+```java
+logger.error("DB error: {}", WebLogger.printStackTrace(e));
+logger.error("Error: {}", WebLogger.printTop20StackTrace(e));
+```
+
+## Object Annotations
+
+**Class-Level:**
+
+- `@Sensitizable` - Enable field-level sensitivity control
+- `@Sensitizable(mode = PrintMode.inclusive)` - Only log `@IncludeElement`
+  fields
+
+**Field-Level:**
+
+- `@HiddenElement` - L4/L5 data (exclude from logs)
+- `@SensitiveElement` - L3 data (auto-wrap with {E})
+- `@IncludeElement` - Include field (with inclusive mode)
+
+**Collections:**
+
+- List/Array/Set/Map with L3 values:
+  `@SensitiveElement(type = CryptoMarker.ENCRYPT)`
+- Map with L3 keys+values:
+  `@SensitiveElement(type = CryptoMarker.ENCRYPT, using = Transfers.MapKeyCryptoTransfer.class)`
+
+### Example
+
+```java
+@Sensitizable
+class UserRequest {
+    @HiddenElement String password;
+    @HiddenElement String driverLicense;
+    @SensitiveElement String email;
+    @SensitiveElement String userId;
+    String meetingId;
+    @SensitiveElement(type = CryptoMarker.ENCRYPT) List<String> phoneNumbers;
+}
+
+logger.info("Request {#}", userRequest);
+```
+
+## Recommended Configuration
+
+Add to `logback.xml`:
+
+```xml
+<contextListener class="us.zoom.async.logging.extension.logback.classic.CustomContextListener">
+    <logEncryptionModeOnE>compatible</logEncryptionModeOnE>
+    <logDesensitizeAllFieldsEnable>true</logDesensitizeAllFieldsEnable>
+    <logKeyDesensitizeEnable>true</logKeyDesensitizeEnable>
+</contextListener>
+```
+
+- `logEncryptionModeOnE=compatible` - Auto-applies {#} for non-primitives;
+  @Sensitizable/@HiddenElement require {#}
+- `logDesensitizeAllFieldsEnable` - Masks all @SensitiveElement fields
+  recursively
+- `logKeyDesensitizeEnable` - Auto-applies {E} for map keys

@@ -1,0 +1,94 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: async-platform-demo
+
+async-platform:
+  kafka:
+    bootstrap-servers: localhost:9092
+    client-id: async-platform-demo
+    producer:
+      acks: all
+      retries: 3
+      linger-ms: 5
+      batch-size: 16384
+      request-timeout-ms: 3000
+  consumer:
+    poll-timeout-ms: 1000
+    bindings:
+      order-created:
+        enabled: true
+        handler-name: orderCreatedHandler
+        topic: async_platform_tasks
+        group: async-platform-demo
+        sub-topics:
+          - order.created
+        concurrency: 1
+        retry-topic: async_platform_tasks_retry
+        dlq-topic: async_platform_tasks_dlq
+        poison-topic: async_platform_tasks_poison
+      order-retry-source:
+        enabled: true
+        handler-name: retryingOrderHandler
+        topic: async_platform_tasks
+        group: async-platform-demo
+        sub-topics:
+          - order.retry.once
+        concurrency: 1
+        retry-topic: async_platform_tasks_retry
+        dlq-topic: async_platform_tasks_dlq
+        poison-topic: async_platform_tasks_poison
+      order-retry-receiver:
+        enabled: true
+        handler-name: retryingOrderHandler
+        topic: async_platform_tasks_retry
+        group: async-platform-demo-retry
+        sub-topics:
+          - order.retry.once
+        concurrency: 1
+        dlq-topic: async_platform_tasks_dlq
+        poison-topic: async_platform_tasks_poison
+      order-dlq-source:
+        enabled: true
+        handler-name: dlqSourceOrderHandler
+        topic: async_platform_tasks
+        group: async-platform-demo
+        sub-topics:
+          - order.dlq
+        concurrency: 1
+        retry-topic: async_platform_tasks_retry
+        dlq-topic: async_platform_tasks_dlq
+        poison-topic: async_platform_tasks_poison
+      order-dlq-observer:
+        enabled: true
+        handler-name: deadLetterObservationHandler
+        topic: async_platform_tasks_dlq
+        group: async-platform-demo-dlq
+        sub-topics:
+          - order.retry.once
+          - order.dlq
+        concurrency: 1
+        poison-topic: async_platform_tasks_poison
+      domain-events:
+        enabled: true
+        handler-name: domainEventMqHandler
+        topic: async_platform_events
+        group: async-platform-demo
+        sub-topics:
+          - domain.event
+        concurrency: 1
+        retry-topic: async_platform_events_retry
+        dlq-topic: async_platform_events_dlq
+        poison-topic: async_platform_events_poison
+  domain-events:
+    topic: async_platform_events
+    sub-topic: domain.event
+    allow-local-dispatch: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

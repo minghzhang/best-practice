@@ -1,0 +1,65 @@
+---
+globs: *.py
+---
+# Secure Development Principles
+
+## 1. Input Validation & Sanitization
+
+- Treat all external input as untrusted (CLI args, HTTP requests, environment
+  variables, files, JSON, etc.).
+- Use Pydantic or type-hinting for strict schema validation.
+- Validate type, length, format, and range.
+- Use strict parsing (e.g., `int()` with error handling).
+- Reject unexpected fields (prefer allowlists over denylists).
+- Never use pickle for untrusted data.
+
+## 2. Avoid Dangerous Functions
+
+- ❌ Do NOT use: `eval()`, `exec()`, `compile()` with untrusted input.
+- ❌ Avoid `yaml.load()` without `Loader=yaml.SafeLoader`.
+- ❌ Avoid shell=True in subprocess calls.
+- ❌ Avoid dynamic imports based on user input.
+- ❌ Do not build SQL queries using string concatenation.
+
+## 3. Secure Subprocess Usage
+
+- Always use: subprocess.run([...], check=True)
+- Pass arguments as a list, not a string.
+- Never use shell=True unless absolutely required and justified.
+
+## 4. SQL Injection Prevention
+
+- Always use parameterized queries (psycopg2, sqlite3 placeholders):
+  cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,)) Never use
+  f-strings or string concatenation for SQL queries.
+
+## 5. Cryptographic
+
+- Never hardcode secrets (API keys, passwords, tokens). Use secrets module for
+  secure token generation.
+- Use environment variables via os.environ.
+- Use cryptography.fernet or hashlib
+- Use PBKDF2 algorithm and use passlib for password hashing. Never store
+  plaintext passwords.
+
+## 6. File Handling Safety
+
+- Validate file paths. Prevent path traversal (os.path.abspath,
+  pathlib.Path.resolve()) and checking against a base directory.
+- Use safe file permissions when writing sensitive data.
+- Avoid writing to predictable temporary file names.
+- Open files using explicit encoding.
+
+## 7. Web Framework Safety
+
+- Use HTTPS URLs only.
+- Enable CSRF protection of the framework (Flask/FastAPI/Django)
+- Use secure cookies (HttpOnly, Secure, SameSite=Strict).
+- Use strict CSP headers where relevant.
+- Never disable SSL verification.
+
+## 8. Dependency & Supply Chain Security
+
+- Prefer the Python Standard Library where possible. If using third-party libs,
+  ensure they are well-maintained (e.g., requests over urllib3)
+- Avoid deprecated packages. Pin versions in requirements.txt.

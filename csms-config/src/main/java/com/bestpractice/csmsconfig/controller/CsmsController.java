@@ -17,7 +17,7 @@ public class CsmsController {
         DBConfig dbConfig = new DBConfig();
         dbConfig.setPassword("1qaz@WSX");
         dbConfig.setUsername("root");
-        dbConfig.setUrl("jdbc:mysql://0.0.0.0:3316/novels");
+        dbConfig.setUrl("jdbc:mysql://127.0.0.1:3306/landon");
         dbConfig.setDriverClassName("com.mysql.cj.jdbc.Driver");
         log.info("CsmsController getDBConfig: {}", dbConfig);
         return dbConfig;
